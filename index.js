@@ -10,6 +10,7 @@ const { promises: { readFile } } = require('fs')
 const inputs = {
   diff: core.getInput('show-diff'),
   plan: core.getInput('show-plan'),
+  removeStaleComments: core.getInput('remove-stale-comments'),
   text: core.getInput('terraform-text'),
   json: core.getInput('terraform-json'),
   token: core.getInput('github-token')
@@ -40,6 +41,26 @@ function errorHandler (err) {
 // catch errors and exit
 process.on('unhandledRejection', errorHandler)
 process.on('uncaughtException', errorHandler)
+
+const removeStaleComments = async () => {
+  // get issue comments
+  const issueComments = await octokit.issues.listComments({
+    ...github.context.repo,
+    issue_number: pull_request.number,
+  })
+
+  // get action comments
+  const actionComments = issueComments.filter(c => c.body.includes("Plan"))
+
+  // remove existing comments
+  actionComments.forEach(c => {
+    await octokit.issues.deleteComment({
+      ...github.context.repo,
+      issue_number: pull_request.number,
+      comment_id: c["id"]
+    })
+  })
+}
 
 async function main () {
   // load terraform files
@@ -80,6 +101,10 @@ ${text}
 ${diff}
 </details>
 `
+  }
+
+  if (inputs.removeStaleComments === 'true') {
+    removeStaleComments()
   }
 
   // update PR
