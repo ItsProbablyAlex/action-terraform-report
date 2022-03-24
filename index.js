@@ -6,6 +6,8 @@ const github = require('@actions/github')
 const unidiff = require('@ahmadnassri/terraform-unidiff')
 const { promises: { readFile } } = require('fs')
 
+const AUTOMATED_COMMENT_TITLE = "[Automated] - Terraform Plan"
+
 // parse inputs
 const inputs = {
   diff: core.getInput('show-diff'),
@@ -50,7 +52,7 @@ const removeStaleComments = async () => {
   })
 
   // get action comments
-  const actionComments = issueComments.filter(c => c.body.includes("Plan"))
+  const actionComments = issueComments.filter(c => c.body.includes("[Automated] - Terraform Plan"))
 
   // remove existing comments
   actionComments.forEach(c => {
@@ -78,6 +80,7 @@ async function main () {
   const diff = patches.map(patch => `\`\`\`diff\n${patch}\n\`\`\``).join('\n\n')
 
   let body = `
+### ${AUTOMATED_COMMENT_TITLE}
 #### Run #[${runId}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/actions/runs/${runId}) from ${github.context.sha} on \`${github.context.ref}\`
 
 ##### Plan: \`${summary.create}\` to add, \`${summary.update}\` to change, \`${summary.delete}\` to destroy
